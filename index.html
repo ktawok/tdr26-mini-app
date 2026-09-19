@@ -6,180 +6,449 @@
     <title>ТДР-26 МГРИ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-bg-color, #121212); color: var(--tg-theme-text-color, #fff); margin: 0; padding: 0; }
-        .tabs { display: flex; background: #1e1e1e; padding: 8px; border-bottom: 1px solid #333; }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-weight: 500; font-size: 13px; }
-        .tab.active { background: #2a82f6; color: #fff; }
-        .content { padding: 16px; display: none; }
-        .content.active { display: block; }
-        .card { background: #1e1e1e; border: 1px solid #2c2c2c; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
-        .card-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; color: #ffaa00; }
-        .date-picker-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        input[type="text"], textarea { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; }
-        .btn { width: 100%; background: #2a82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-danger { background: #e53935; margin-top: 5px; padding: 6px 12px; width: auto; font-size: 12px; }
-        .admin-zone { display: none; background: #252525; padding: 12px; border-radius: 10px; margin-top: 15px; border: 1px dashed #ffaa00; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; }
-        .modal-box { background: #1e1e1e; margin: 40% auto; padding: 20px; width: 85%; border-radius: 12px; text-align: center; }
-        .log-item { font-size: 12px; border-bottom: 1px solid #2a2a2a; padding: 8px 0; color: #aaa; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #121212);
+            color: var(--tg-theme-text-color, #ffffff);
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        /* Информационная плашка пользователя */
+        .user-status-bar {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 8px 12px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+        .status-badge {
+            background: #334155;
+            color: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .status-badge.admin { background: #16a34a; color: #fff; }
+
+        /* Вкладки */
+        .tabs {
+            display: flex;
+            background: #1e1e1e;
+            padding: 6px;
+            gap: 4px;
+            border-bottom: 1px solid #2d2d2d;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 4px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #888;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        /* Контент */
+        .content {
+            padding: 16px;
+            display: none;
+        }
+        .content.active {
+            display: block;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 14px;
+            color: #f3f4f6;
+        }
+
+        /* Карточки */
+        .card {
+            background: #1e1e1e;
+            border: 1px solid #2e2e2e;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #f59e0b;
+            font-size: 14px;
+        }
+        .card-body {
+            font-size: 14px;
+            line-height: 1.4;
+            color: #e5e7eb;
+            white-space: pre-wrap;
+        }
+
+        /* Поля ввода и кнопки */
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            background: #2a2a2a;
+            border: 1px solid #3d3d3d;
+            color: white;
+            border-radius: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-size: 14px;
+            outline: none;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #2563eb;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .btn {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:active {
+            background: #1d4ed8;
+        }
+        .btn-danger {
+            background: #dc2626;
+            margin-top: 10px;
+            padding: 8px 12px;
+            width: auto;
+            font-size: 12px;
+        }
+
+        /* Зона администратора */
+        .admin-zone {
+            display: none; /* Управляется из JS */
+            background: #1e293b;
+            padding: 14px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border: 1px dashed #f59e0b;
+        }
+        .admin-zone h3 {
+            margin-top: 0;
+            font-size: 15px;
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-box {
+            background: #1e1e1e;
+            padding: 20px;
+            width: 85%;
+            max-width: 340px;
+            border-radius: 14px;
+            text-align: center;
+            border: 1px solid #3d3d3d;
+            margin: auto;
+        }
+        .modal-box h3 { margin-top: 0; }
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .log-item {
+            font-size: 12px;
+            border-bottom: 1px solid #2a2a2a;
+            padding: 8px 0;
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('hw')">Общее ДЗ</div>
-        <div class="tab" onclick="switchTab('schedule')">Расписание</div>
-        <div class="tab" onclick="switchTab('session')">Сессия</div>
-        <div class="tab" onclick="switchTab('logs')">Логи</div>
+    <!-- Шапка со статусом -->
+    <div class="user-status-bar">
+        <span>ID: <strong id="debug-user-id">Определяется...</strong></span>
+        <span id="debug-role-badge" class="status-badge">Загрузка...</span>
     </div>
 
-    <!-- Общее ДЗ -->
+    <!-- Навигация -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('hw', this)">Общее ДЗ</div>
+        <div class="tab" onclick="switchTab('schedule', this)">Расписание</div>
+        <div class="tab" onclick="switchTab('session', this)">Сессия</div>
+        <div class="tab" onclick="switchTab('logs', this)">Логи</div>
+    </div>
+
+    <!-- Вкладка: Общее ДЗ -->
     <div id="hw" class="content active">
         <h2>📌 Список всех домашних заданий</h2>
         <div id="hw-list">Загрузка...</div>
 
+        <!-- Панель добавления (показывается только админам) -->
         <div id="admin-add-hw" class="admin-zone">
-            <h3>➕ Добавить ДЗ (Админ)</h3>
-            <input type="text" id="hw-subject" placeholder="Предмет">
+            <h3>➕ Добавить ДЗ (Панель редактора)</h3>
+            <input type="text" id="hw-subject" placeholder="Предмет (например: Высшая математика)">
             <input type="text" id="hw-deadline" placeholder="Срок сдачи (ДД.ММ.ГГГГ)" value="21.09.2026">
-            <textarea id="hw-desc" placeholder="Описание задания"></textarea>
-            <button class="btn" onclick="askConfirmAdd('dz')">Сохранить ДЗ</button>
+            <textarea id="hw-desc" placeholder="Описание задания / параграф / задачи"></textarea>
+            <button class="btn" onclick="askConfirmAdd('dz')">Сохранить задание</button>
         </div>
     </div>
 
-    <!-- Расписание -->
+    <!-- Вкладка: Расписание -->
     <div id="schedule" class="content">
         <h2>📅 Расписание МГРИ (ТДР-26)</h2>
-        <div class="date-picker-box">
-            <label>Дата:</label>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; color: #aaa;">Выберите дату:</label>
             <input type="text" id="selected-date" value="21.09.2026" onchange="loadSchedule()" placeholder="ДД.ММ.ГГГГ">
         </div>
         <div id="schedule-list">Загрузка расписания...</div>
     </div>
 
-    <!-- Сессия -->
+    <!-- Вкладка: Сессия -->
     <div id="session" class="content">
-        <h2>🎓 Даты сессии и зачетов</h2>
+        <h2>🎓 Зачеты и экзамены</h2>
         <div id="session-list">Загрузка...</div>
+
+        <div id="admin-add-session" class="admin-zone">
+            <h3>➕ Добавить экзамен / зачет</h3>
+            <input type="text" id="session-subject" placeholder="Предмет">
+            <input type="text" id="session-deadline" placeholder="Дата экзамена (ДД.ММ.ГГГГ)">
+            <textarea id="session-desc" placeholder="Кабинет, время, требования"></textarea>
+            <button class="btn" onclick="askConfirmAdd('session')">Сохранить в сессию</button>
+        </div>
     </div>
 
-    <!-- Логи -->
+    <!-- Вкладка: Логи -->
     <div id="logs" class="content">
-        <h2>📜 История изменений (Audit Log)</h2>
+        <h2>📜 История действий (Audit Log)</h2>
         <div id="logs-list">Загрузка логов...</div>
     </div>
 
     <!-- Модальное окно подтверждения -->
     <div id="confirmModal" class="modal">
         <div class="modal-box">
-            <h3>⚠️ Подтверждение действия</h3>
-            <p id="modal-text">Вы уверены, что хотите внести изменения?</p>
-            <button class="btn" onclick="executePendingAction()">Да, подтверждаю</button><br><br>
-            <button class="btn btn-danger" style="width: 100%;" onclick="closeModal()">Отмена</button>
+            <h3 style="margin-bottom: 8px;">⚠️ Подтверждение</h3>
+            <p id="modal-text" style="font-size: 14px; color: #ccc;">Вы уверены?</p>
+            <div class="modal-btns">
+                <button class="btn" onclick="executePendingAction()">Да</button>
+                <button class="btn btn-danger" style="margin-top:0; width:100%;" onclick="closeModal()">Отмена</button>
+            </div>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // ВАЖНО: Замени этот URL на публичный адрес своего сервера Render.com
+
+        // ⚠️ ВАЖНО: Укажи здесь точную ссылку своего бэкенда на Render (БЕЗ слэша на конце)
         const BACKEND_URL = "https://tdr26-backend.onrender.com"; 
 
-        const userId = tg.initDataUnsafe?.user?.id || 123456789; // fallback для тестов
-        const username = tg.initDataUnsafe?.user?.username || "student";
+        // Получаем ID и username из Telegram
+        const userId = tg.initDataUnsafe?.user?.id || 123456789;
+        const username = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "student";
 
         let canEdit = false;
         let pendingAction = null;
 
+        // Показываем ID на плашке
+        document.getElementById('debug-user-id').innerText = userId;
+
         async function init() {
             try {
+                // Проверяем права пользователя на бэкенде
                 const res = await fetch(`${BACKEND_URL}/api/user_info?user_id=${userId}`);
-                const data = await res.json();
-                canEdit = data.can_edit;
-                if (canEdit) {
-                    document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
+                if (res.ok) {
+                    const data = await res.json();
+                    canEdit = data.can_edit;
+                    
+                    const badge = document.getElementById('debug-role-badge');
+                    badge.innerText = data.role.toUpperCase();
+                    if (canEdit) {
+                        badge.classList.add('admin');
+                        document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
+                    }
+                } else {
+                    document.getElementById('debug-role-badge').innerText = "VIEWER";
                 }
-            } catch(e) { console.log("Режим просмотра"); }
+            } catch(e) {
+                console.error("Ошибка подключения к бэкенду:", e);
+                document.getElementById('debug-role-badge').innerText = "OFFLINE";
+            }
 
             loadHW();
             loadSchedule();
+            loadSession();
             loadLogs();
         }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+            el.classList.add('active');
         }
 
+        // Загрузка ДЗ
         async function loadHW() {
-            const res = await fetch(`${BACKEND_URL}/api/homework?type=dz`);
-            const data = await res.json();
-            let html = '';
-            data.forEach(item => {
-                html += `<div class="card">
-                    <div class="card-header"><span>${item[1]}</span> <span>до ${item[2]}</span></div>
-                    <div>${item[3]}</div>
-                    ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
-                </div>`;
-            });
-            document.getElementById('hw-list').innerHTML = html || 'ДЗ пока нет';
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/homework?type=dz`);
+                const data = await res.json();
+                let html = '';
+                if (data.length === 0) {
+                    html = '<div style="color:#888; text-align:center; padding:20px;">Заданий пока нет</div>';
+                } else {
+                    data.forEach(item => {
+                        html += `<div class="card">
+                            <div class="card-header"><span>${item[1]}</span> <span>до ${item[2]}</span></div>
+                            <div class="card-body">${item[3]}</div>
+                            ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
+                        </div>`;
+                    });
+                }
+                document.getElementById('hw-list').innerHTML = html;
+            } catch(e) {
+                document.getElementById('hw-list').innerHTML = '<div style="color:#ef4444;">Ошибка загрузки ДЗ</div>';
+            }
         }
 
+        // Загрузка расписания
         async function loadSchedule() {
             const date = document.getElementById('selected-date').value;
-            const res = await fetch(`${BACKEND_URL}/api/schedule?date=${date}`);
-            const data = await res.json();
-            let html = '';
-            data.pairs.forEach(p => {
-                html += `<div class="card">
-                    <div class="card-header">${p.num} пара (${p.time}) — Аудитория ${p.room}</div>
-                    <div style="font-size: 15px; font-weight: bold;">${p.subject}</div>
-                </div>`;
-            });
-            document.getElementById('schedule-list').innerHTML = html || 'Нет пар';
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/schedule?date=${date}`);
+                const data = await res.json();
+                let html = '';
+                data.pairs.forEach(p => {
+                    html += `<div class="card">
+                        <div class="card-header">${p.num} пара (${p.time}) — Каб. ${p.room}</div>
+                        <div class="card-body" style="font-weight:bold;">${p.subject}</div>
+                    </div>`;
+                });
+                document.getElementById('schedule-list').innerHTML = html || 'Нет пар';
+            } catch(e) {
+                document.getElementById('schedule-list').innerHTML = ' Ошибка загрузки расписания';
+            }
         }
 
+        // Загрузка сессии
+        async function loadSession() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/homework?type=session`);
+                const data = await res.json();
+                let html = '';
+                if (data.length === 0) {
+                    html = '<div style="color:#888; text-align:center; padding:20px;">Информация о сессии не добавлена</div>';
+                } else {
+                    data.forEach(item => {
+                        html += `<div class="card">
+                            <div class="card-header"><span>${item[1]}</span> <span>${item[2]}</span></div>
+                            <div class="card-body">${item[3]}</div>
+                            ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
+                        </div>`;
+                    });
+                }
+                document.getElementById('session-list').innerHTML = html;
+            } catch(e) {
+                document.getElementById('session-list').innerHTML = 'Ошибка загрузки сессии';
+            }
+        }
+
+        // Загрузка логов
         async function loadLogs() {
-            const res = await fetch(`${BACKEND_URL}/api/logs?user_id=${userId}`);
-            const data = await res.json();
-            let html = '';
-            data.forEach(l => {
-                html += `<div class="log-item"><strong>@${l[0]}</strong>: ${l[1]} <em>(${l[2]})</em></div>`;
-            });
-            document.getElementById('logs-list').innerHTML = html || 'Логи пусты';
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/logs?user_id=${userId}`);
+                if (!res.ok) {
+                    document.getElementById('logs-list').innerHTML = '<div style="color:#888;">Просмотр логов доступен только участникам</div>';
+                    return;
+                }
+                const data = await res.json();
+                let html = '';
+                data.forEach(l => {
+                    html += `<div class="log-item"><strong>@${l[0]}</strong>: ${l[1]} <br><span style="color:#666; font-size:10px;">${l[2]}</span></div>`;
+                });
+                document.getElementById('logs-list').innerHTML = html || 'Логи пусты';
+            } catch(e) {
+                document.getElementById('logs-list').innerHTML = 'Ошибка загрузки логов';
+            }
         }
 
-        // Подтверждения
+        // Подтверждения и действия
         function askConfirmAdd(type) {
+            const prefix = type === 'dz' ? 'hw' : 'session';
+            const subject = document.getElementById(`${prefix}-subject`).value;
+            const deadline = document.getElementById(`${prefix}-deadline`).value;
+            const description = document.getElementById(`${prefix}-desc`).value;
+
+            if (!subject || !deadline || !description) {
+                alert("Заполните все поля!");
+                return;
+            }
+
             pendingAction = async () => {
-                const subject = document.getElementById('hw-subject').value;
-                const deadline = document.getElementById('hw-deadline').value;
-                const description = document.getElementById('hw-desc').value;
                 await fetch(`${BACKEND_URL}/api/homework/add`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'json'},
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ subject, deadline, description, type, user_id: userId, username })
                 });
-                loadHW();
+                document.getElementById(`${prefix}-subject`).value = '';
+                document.getElementById(`${prefix}-desc`).value = '';
+                if (type === 'dz') loadHW(); else loadSession();
+                loadLogs();
             };
-            document.getElementById('modal-text').innerText = "Сохранить новое задание?";
-            document.getElementById('confirmModal').style.display = 'block';
+
+            document.getElementById('modal-text').innerText = `Добавить ${type === 'dz' ? 'ДЗ' : 'экзамен'} по предмету "${subject}"?`;
+            document.getElementById('confirmModal').style.display = 'flex';
         }
 
         function askConfirmDelete(hwId) {
             pendingAction = async () => {
                 await fetch(`${BACKEND_URL}/api/homework/delete`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'json'},
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ hw_id: hwId, user_id: userId, username })
                 });
                 loadHW();
+                loadSession();
+                loadLogs();
             };
-            document.getElementById('modal-text').innerText = "Удалить это домашнее задание?";
-            document.getElementById('confirmModal').style.display = 'block';
+            document.getElementById('modal-text').innerText = "Удалить эту запись?";
+            document.getElementById('confirmModal').style.display = 'flex';
         }
 
         function executePendingAction() {
@@ -191,6 +460,7 @@
             document.getElementById('confirmModal').style.display = 'none';
         }
 
+        // Старт
         init();
     </script>
 </body>
