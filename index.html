@@ -15,7 +15,6 @@
             user-select: none;
         }
 
-        /* Информационная плашка пользователя */
         .user-status-bar {
             background: #1e293b;
             color: #94a3b8;
@@ -35,7 +34,6 @@
         }
         .status-badge.admin { background: #16a34a; color: #fff; }
 
-        /* Вкладки */
         .tabs {
             display: flex;
             background: #1e1e1e;
@@ -62,7 +60,6 @@
             color: #ffffff;
         }
 
-        /* Контент */
         .content {
             padding: 16px;
             display: none;
@@ -71,14 +68,24 @@
             display: block;
         }
 
-        h2 {
-            font-size: 18px;
-            margin-top: 0;
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
             margin-bottom: 14px;
-            color: #f3f4f6;
         }
 
-        /* Карточки */
+        select {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #3d3d3d;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            outline: none;
+        }
+
         .card {
             background: #1e1e1e;
             border: 1px solid #2e2e2e;
@@ -93,17 +100,26 @@
             align-items: center;
             font-weight: 700;
             margin-bottom: 8px;
-            color: #f59e0b;
-            font-size: 14px;
+            color: #f3f4f6;
+            font-size: 15px;
+        }
+        .deadline-badge {
+            background: #3b82f622;
+            color: #60a5fa;
+            border: 1px solid #3b82f644;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
         }
         .card-body {
             font-size: 14px;
             line-height: 1.4;
-            color: #e5e7eb;
+            color: #d1d5db;
             white-space: pre-wrap;
+            margin-top: 6px;
         }
 
-        /* Поля ввода и кнопки */
         input[type="text"], textarea {
             width: 100%;
             padding: 12px;
@@ -115,9 +131,6 @@
             margin-bottom: 10px;
             font-size: 14px;
             outline: none;
-        }
-        input[type="text"]:focus, textarea:focus {
-            border-color: #2563eb;
         }
         textarea {
             resize: vertical;
@@ -134,36 +147,41 @@
             font-weight: 700;
             font-size: 14px;
             cursor: pointer;
-            transition: background 0.2s;
         }
-        .btn:active {
-            background: #1d4ed8;
+        .btn-toggle {
+            background: #334155;
+            color: #cbd5e1;
+            padding: 8px 12px;
+            font-size: 12px;
+            width: auto;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
         }
         .btn-danger {
             background: #dc2626;
             margin-top: 10px;
-            padding: 8px 12px;
+            padding: 6px 12px;
             width: auto;
             font-size: 12px;
         }
 
-        /* Зона администратора */
         .admin-zone {
-            display: none; /* Управляется из JS */
+            display: none;
             background: #1e293b;
             padding: 14px;
             border-radius: 12px;
-            margin-top: 20px;
+            margin-top: 16px;
             border: 1px dashed #f59e0b;
         }
         .admin-zone h3 {
             margin-top: 0;
-            font-size: 15px;
+            font-size: 14px;
             color: #f59e0b;
             margin-bottom: 10px;
         }
 
-        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -184,13 +202,6 @@
             border: 1px solid #3d3d3d;
             margin: auto;
         }
-        .modal-box h3 { margin-top: 0; }
-        .modal-btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-        }
-
         .log-item {
             font-size: 12px;
             border-bottom: 1px solid #2a2a2a;
@@ -201,43 +212,41 @@
 </head>
 <body>
 
-    <!-- Шапка со статусом -->
+    <!-- Шапка статуса -->
     <div class="user-status-bar">
         <span>ID: <strong id="debug-user-id">Определяется...</strong></span>
         <span id="debug-role-badge" class="status-badge">Загрузка...</span>
     </div>
 
-    <!-- Навигация -->
+    <!-- Навигация без расписания -->
     <div class="tabs">
         <div class="tab active" onclick="switchTab('hw', this)">Общее ДЗ</div>
-        <div class="tab" onclick="switchTab('schedule', this)">Расписание</div>
         <div class="tab" onclick="switchTab('session', this)">Сессия</div>
         <div class="tab" onclick="switchTab('logs', this)">Логи</div>
     </div>
 
     <!-- Вкладка: Общее ДЗ -->
     <div id="hw" class="content active">
-        <h2>📌 Список всех домашних заданий</h2>
+        <div class="controls-bar">
+            <!-- Сортировка -->
+            <select id="hw-sort" onchange="loadHW()">
+                <option value="asc">⏳ Сначала ближайшие</option>
+                <option value="desc">⏳ Сначала дальние</option>
+            </select>
+            <!-- Кнопка скрытия панели редактора -->
+            <button id="toggle-editor-btn" class="btn-toggle" style="display:none;" onclick="toggleEditorPanel()">👁️ Скрыть панель</button>
+        </div>
+
         <div id="hw-list">Загрузка...</div>
 
-        <!-- Панель добавления (показывается только админам) -->
+        <!-- Панель добавления ДЗ -->
         <div id="admin-add-hw" class="admin-zone">
-            <h3>➕ Добавить ДЗ (Панель редактора)</h3>
+            <h3>➕ Панель редактора (Добавить ДЗ)</h3>
             <input type="text" id="hw-subject" placeholder="Предмет (например: Высшая математика)">
-            <input type="text" id="hw-deadline" placeholder="Срок сдачи (ДД.ММ.ГГГГ)" value="21.09.2026">
+            <input type="text" id="hw-deadline" placeholder="Срок сдачи (ДД.ММ.ГГГГ)" value="25.09.2026">
             <textarea id="hw-desc" placeholder="Описание задания / параграф / задачи"></textarea>
             <button class="btn" onclick="askConfirmAdd('dz')">Сохранить задание</button>
         </div>
-    </div>
-
-    <!-- Вкладка: Расписание -->
-    <div id="schedule" class="content">
-        <h2>📅 Расписание МГРИ (ТДР-26)</h2>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 12px; color: #aaa;">Выберите дату:</label>
-            <input type="text" id="selected-date" value="21.09.2026" onchange="loadSchedule()" placeholder="ДД.ММ.ГГГГ">
-        </div>
-        <div id="schedule-list">Загрузка расписания...</div>
     </div>
 
     <!-- Вкладка: Сессия -->
@@ -260,12 +269,12 @@
         <div id="logs-list">Загрузка логов...</div>
     </div>
 
-    <!-- Модальное окно подтверждения -->
+    <!-- Модальное окно -->
     <div id="confirmModal" class="modal">
         <div class="modal-box">
             <h3 style="margin-bottom: 8px;">⚠️ Подтверждение</h3>
             <p id="modal-text" style="font-size: 14px; color: #ccc;">Вы уверены?</p>
-            <div class="modal-btns">
+            <div style="display:flex; gap:10px; margin-top:16px;">
                 <button class="btn" onclick="executePendingAction()">Да</button>
                 <button class="btn btn-danger" style="margin-top:0; width:100%;" onclick="closeModal()">Отмена</button>
             </div>
@@ -276,22 +285,19 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ⚠️ ВАЖНО: Укажи здесь точную ссылку своего бэкенда на Render (БЕЗ слэша на конце)
         const BACKEND_URL = "https://tdr26-backend.onrender.com"; 
 
-        // Получаем ID и username из Telegram
         const userId = tg.initDataUnsafe?.user?.id || 123456789;
         const username = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "student";
 
         let canEdit = false;
         let pendingAction = null;
+        let isPanelVisible = true;
 
-        // Показываем ID на плашке
         document.getElementById('debug-user-id').innerText = userId;
 
         async function init() {
             try {
-                // Проверяем права пользователя на бэкенде
                 const res = await fetch(`${BACKEND_URL}/api/user_info?user_id=${userId}`);
                 if (res.ok) {
                     const data = await res.json();
@@ -302,17 +308,17 @@
                     if (canEdit) {
                         badge.classList.add('admin');
                         document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
+                        document.getElementById('toggle-editor-btn').style.display = 'inline-block';
                     }
                 } else {
                     document.getElementById('debug-role-badge').innerText = "VIEWER";
                 }
             } catch(e) {
-                console.error("Ошибка подключения к бэкенду:", e);
+                console.error("Ошибка подключения:", e);
                 document.getElementById('debug-role-badge').innerText = "OFFLINE";
             }
 
             loadHW();
-            loadSchedule();
             loadSession();
             loadLogs();
         }
@@ -324,18 +330,47 @@
             el.classList.add('active');
         }
 
-        // Загрузка ДЗ
+        function toggleEditorPanel() {
+            isPanelVisible = !isPanelVisible;
+            document.querySelectorAll('.admin-zone').forEach(el => {
+                el.style.display = isPanelVisible ? 'block' : 'none';
+            });
+            document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панель' : '✏️ Показать панель';
+        }
+
+        // Вспомогательная функция парсинга даты "ДД.ММ.ГГГГ" для сортировки
+        function parseDate(str) {
+            if (!str) return new Date(0);
+            const parts = str.split('.');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            return new Date(str);
+        }
+
+        // Загрузка и сортировка ДЗ
         async function loadHW() {
             try {
                 const res = await fetch(`${BACKEND_URL}/api/homework?type=dz`);
-                const data = await res.json();
+                let data = await res.json();
+                
+                const sortOrder = document.getElementById('hw-sort').value;
+                data.sort((a, b) => {
+                    const dateA = parseDate(a[2]);
+                    const dateB = parseDate(b[2]);
+                    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+
                 let html = '';
                 if (data.length === 0) {
                     html = '<div style="color:#888; text-align:center; padding:20px;">Заданий пока нет</div>';
                 } else {
                     data.forEach(item => {
                         html += `<div class="card">
-                            <div class="card-header"><span>${item[1]}</span> <span>до ${item[2]}</span></div>
+                            <div class="card-header">
+                                <span>📚 ${item[1]}</span>
+                                <span class="deadline-badge">⏳ Срок: ${item[2]}</span>
+                            </div>
                             <div class="card-body">${item[3]}</div>
                             ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
                         </div>`;
@@ -347,26 +382,6 @@
             }
         }
 
-        // Загрузка расписания
-        async function loadSchedule() {
-            const date = document.getElementById('selected-date').value;
-            try {
-                const res = await fetch(`${BACKEND_URL}/api/schedule?date=${date}`);
-                const data = await res.json();
-                let html = '';
-                data.pairs.forEach(p => {
-                    html += `<div class="card">
-                        <div class="card-header">${p.num} пара (${p.time}) — Каб. ${p.room}</div>
-                        <div class="card-body" style="font-weight:bold;">${p.subject}</div>
-                    </div>`;
-                });
-                document.getElementById('schedule-list').innerHTML = html || 'Нет пар';
-            } catch(e) {
-                document.getElementById('schedule-list').innerHTML = ' Ошибка загрузки расписания';
-            }
-        }
-
-        // Загрузка сессии
         async function loadSession() {
             try {
                 const res = await fetch(`${BACKEND_URL}/api/homework?type=session`);
@@ -377,7 +392,10 @@
                 } else {
                     data.forEach(item => {
                         html += `<div class="card">
-                            <div class="card-header"><span>${item[1]}</span> <span>${item[2]}</span></div>
+                            <div class="card-header">
+                                <span>🎓 ${item[1]}</span>
+                                <span class="deadline-badge">📅 ${item[2]}</span>
+                            </div>
                             <div class="card-body">${item[3]}</div>
                             ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
                         </div>`;
@@ -389,7 +407,6 @@
             }
         }
 
-        // Загрузка логов
         async function loadLogs() {
             try {
                 const res = await fetch(`${BACKEND_URL}/api/logs?user_id=${userId}`);
@@ -408,7 +425,6 @@
             }
         }
 
-        // Подтверждения и действия
         function askConfirmAdd(type) {
             const prefix = type === 'dz' ? 'hw' : 'session';
             const subject = document.getElementById(`${prefix}-subject`).value;
@@ -460,7 +476,6 @@
             document.getElementById('confirmModal').style.display = 'none';
         }
 
-        // Старт
         init();
     </script>
 </body>
