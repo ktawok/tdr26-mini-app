@@ -1,32 +1,27 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ТДР-26 МГРИ</title>
-    <!-- Подключаем скрипт Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #1e1e1e);
-            color: var(--tg-theme-text-color, #ffffff);
-            margin: 0; padding: 0;
-        }
-        .tabs { display: flex; background: var(--tg-theme-secondary-bg-color, #2c2c2c); padding: 10px; }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; }
-        .tab.active { background: var(--tg-theme-button-color, #2a82f6); color: var(--tg-theme-button-text-color, #fff); }
-        .content { padding: 20px; display: none; }
+        body { font-family: -apple-system, sans-serif; background: var(--tg-theme-bg-color, #121212); color: var(--tg-theme-text-color, #fff); margin: 0; padding: 0; }
+        .tabs { display: flex; background: #1e1e1e; padding: 8px; border-bottom: 1px solid #333; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-weight: 500; font-size: 13px; }
+        .tab.active { background: #2a82f6; color: #fff; }
+        .content { padding: 16px; display: none; }
         .content.active { display: block; }
-        .card { background: var(--tg-theme-secondary-bg-color, #2c2c2c); padding: 15px; border-radius: 10px; margin-bottom: 10px; }
-        .edit-btn { background: #ffaa00; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; float: right; display: none; }
-
-        /* Модальное окно подтверждения */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
-        .modal-content { background: var(--tg-theme-bg-color, #1e1e1e); margin: 50% auto; padding: 20px; width: 80%; border-radius: 10px; text-align: center; }
-        .btn-confirm { background: red; color: white; border: none; padding: 10px; margin: 5px; border-radius: 5px; }
-        .btn-cancel { background: gray; color: white; border: none; padding: 10px; margin: 5px; border-radius: 5px; }
+        .card { background: #1e1e1e; border: 1px solid #2c2c2c; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
+        .card-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; color: #ffaa00; }
+        .date-picker-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        input[type="text"], textarea { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; }
+        .btn { width: 100%; background: #2a82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: #e53935; margin-top: 5px; padding: 6px 12px; width: auto; font-size: 12px; }
+        .admin-zone { display: none; background: #252525; padding: 12px; border-radius: 10px; margin-top: 15px; border: 1px dashed #ffaa00; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; }
+        .modal-box { background: #1e1e1e; margin: 40% auto; padding: 20px; width: 85%; border-radius: 12px; text-align: center; }
+        .log-item { font-size: 12px; border-bottom: 1px solid #2a2a2a; padding: 8px 0; color: #aaa; }
     </style>
 </head>
 <body>
@@ -35,60 +30,168 @@
         <div class="tab active" onclick="switchTab('hw')">Общее ДЗ</div>
         <div class="tab" onclick="switchTab('schedule')">Расписание</div>
         <div class="tab" onclick="switchTab('session')">Сессия</div>
+        <div class="tab" onclick="switchTab('logs')">Логи</div>
     </div>
 
-    <!-- Вкладка ДЗ -->
+    <!-- Общее ДЗ -->
     <div id="hw" class="content active">
-        <h2>Дедлайны</h2>
-        <div class="card">
-            <button class="edit-btn" onclick="showConfirm()">✏️ Редактировать</button>
-            <strong>Математика</strong><br>
-            Срок: 21.09.2026<br>
-            Сделать пределы, номера 1-15.
+        <h2>📌 Список всех домашних заданий</h2>
+        <div id="hw-list">Загрузка...</div>
+
+        <div id="admin-add-hw" class="admin-zone">
+            <h3>➕ Добавить ДЗ (Админ)</h3>
+            <input type="text" id="hw-subject" placeholder="Предмет">
+            <input type="text" id="hw-deadline" placeholder="Срок сдачи (ДД.ММ.ГГГГ)" value="21.09.2026">
+            <textarea id="hw-desc" placeholder="Описание задания"></textarea>
+            <button class="btn" onclick="askConfirmAdd('dz')">Сохранить ДЗ</button>
         </div>
     </div>
 
-    <!-- Вкладка Расписание -->
+    <!-- Расписание -->
     <div id="schedule" class="content">
-        <h2>Расписание (MMIS)</h2>
-        <input type="date" style="padding: 10px; width: 90%; margin-bottom: 15px; border-radius: 5px;" value="2026-09-21">
-        <div class="card">
-            <strong>1 пара (09:00 - 10:30)</strong><br>
-            Физические процессы нефтегазового производства
+        <h2>📅 Расписание МГРИ (ТДР-26)</h2>
+        <div class="date-picker-box">
+            <label>Дата:</label>
+            <input type="text" id="selected-date" value="21.09.2026" onchange="loadSchedule()" placeholder="ДД.ММ.ГГГГ">
         </div>
+        <div id="schedule-list">Загрузка расписания...</div>
     </div>
 
-    <!-- Вкладка Сессия -->
+    <!-- Сессия -->
     <div id="session" class="content">
-        <h2>Сессия и Долги</h2>
-        <p>Здесь будут даты экзаменов.</p>
+        <h2>🎓 Даты сессии и зачетов</h2>
+        <div id="session-list">Загрузка...</div>
+    </div>
+
+    <!-- Логи -->
+    <div id="logs" class="content">
+        <h2>📜 История изменений (Audit Log)</h2>
+        <div id="logs-list">Загрузка логов...</div>
     </div>
 
     <!-- Модальное окно подтверждения -->
     <div id="confirmModal" class="modal">
-        <div class="modal-content">
-            <p>Вы уверены, что хотите изменить это задание?</p>
-            <button class="btn-confirm" onclick="closeConfirm()">Да, изменить</button>
-            <button class="btn-cancel" onclick="closeConfirm()">Отмена</button>
+        <div class="modal-box">
+            <h3>⚠️ Подтверждение действия</h3>
+            <p id="modal-text">Вы уверены, что хотите внести изменения?</p>
+            <button class="btn" onclick="executePendingAction()">Да, подтверждаю</button><br><br>
+            <button class="btn btn-danger" style="width: 100%;" onclick="closeModal()">Отмена</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Открывает окно на весь экран
+        tg.expand();
+        
+        // ВАЖНО: Замени этот URL на публичный адрес своего сервера Render.com
+        const BACKEND_URL = "https://your-render-app.onrender.com"; 
 
-        // Переключение вкладок
+        const userId = tg.initDataUnsafe?.user?.id || 123456789; // fallback для тестов
+        const username = tg.initDataUnsafe?.user?.username || "student";
+
+        let canEdit = false;
+        let pendingAction = null;
+
+        async function init() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/user_info?user_id=${userId}`);
+                const data = await res.json();
+                canEdit = data.can_edit;
+                if (canEdit) {
+                    document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
+                }
+            } catch(e) { console.log("Режим просмотра"); }
+
+            loadHW();
+            loadSchedule();
+            loadLogs();
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
         }
 
-        // Логика модального окна для админов
-        function showConfirm() { document.getElementById('confirmModal').style.display = 'block'; }
-        function closeConfirm() { document.getElementById('confirmModal').style.display = 'none'; }
+        async function loadHW() {
+            const res = await fetch(`${BACKEND_URL}/api/homework?type=dz`);
+            const data = await res.json();
+            let html = '';
+            data.forEach(item => {
+                html += `<div class="card">
+                    <div class="card-header"><span>${item[1]}</span> <span>до ${item[2]}</span></div>
+                    <div>${item[3]}</div>
+                    ${canEdit ? `<button class="btn btn-danger" onclick="askConfirmDelete(${item[0]})">Удалить</button>` : ''}
+                </div>`;
+            });
+            document.getElementById('hw-list').innerHTML = html || 'ДЗ пока нет';
+        }
+
+        async function loadSchedule() {
+            const date = document.getElementById('selected-date').value;
+            const res = await fetch(`${BACKEND_URL}/api/schedule?date=${date}`);
+            const data = await res.json();
+            let html = '';
+            data.pairs.forEach(p => {
+                html += `<div class="card">
+                    <div class="card-header">${p.num} пара (${p.time}) — Аудитория ${p.room}</div>
+                    <div style="font-size: 15px; font-weight: bold;">${p.subject}</div>
+                </div>`;
+            });
+            document.getElementById('schedule-list').innerHTML = html || 'Нет пар';
+        }
+
+        async function loadLogs() {
+            const res = await fetch(`${BACKEND_URL}/api/logs?user_id=${userId}`);
+            const data = await res.json();
+            let html = '';
+            data.forEach(l => {
+                html += `<div class="log-item"><strong>@${l[0]}</strong>: ${l[1]} <em>(${l[2]})</em></div>`;
+            });
+            document.getElementById('logs-list').innerHTML = html || 'Логи пусты';
+        }
+
+        // Подтверждения
+        function askConfirmAdd(type) {
+            pendingAction = async () => {
+                const subject = document.getElementById('hw-subject').value;
+                const deadline = document.getElementById('hw-deadline').value;
+                const description = document.getElementById('hw-desc').value;
+                await fetch(`${BACKEND_URL}/api/homework/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'json'},
+                    body: JSON.stringify({ subject, deadline, description, type, user_id: userId, username })
+                });
+                loadHW();
+            };
+            document.getElementById('modal-text').innerText = "Сохранить новое задание?";
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+
+        function askConfirmDelete(hwId) {
+            pendingAction = async () => {
+                await fetch(`${BACKEND_URL}/api/homework/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'json'},
+                    body: JSON.stringify({ hw_id: hwId, user_id: userId, username })
+                });
+                loadHW();
+            };
+            document.getElementById('modal-text').innerText = "Удалить это домашнее задание?";
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+
+        function executePendingAction() {
+            if (pendingAction) pendingAction();
+            closeModal();
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        init();
     </script>
 </body>
 </html>
