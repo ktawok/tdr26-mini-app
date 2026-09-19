@@ -588,6 +588,16 @@
                 .replace(/'/g, "&#039;");
         }
 
+        // Автоматическое закрытие клавиатуры на iOS при клике в свободное место
+        document.addEventListener('touchstart', function (e) {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                if (!e.target.closest('input, textarea, button, select, .tab')) {
+                    activeEl.blur();
+                }
+            }
+        }, { passive: true });
+
         init();
     </script>
 </body>
