@@ -386,6 +386,31 @@
             return new Date(str);
         }
 
+        // Расчет оставшихся дней с правильными окончаниями
+        function getDaysRemainingText(deadlineStr) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const targetDate = parseDateString(deadlineStr);
+            targetDate.setHours(0, 0, 0, 0);
+
+            const diffTime = targetDate - today;
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) return "сегодня";
+
+            function pluralize(n) {
+                const absN = Math.abs(n) % 100;
+                const n1 = absN % 10;
+                if (absN > 10 && absN < 20) return `${n} дней`;
+                if (n1 > 1 && n1 < 5) return `${n} дня`;
+                if (n1 === 1) return `${n} день`;
+                return `${n} дней`;
+            }
+
+            return diffDays === 1 ? "остался 1 день" : `осталось: ${pluralize(diffDays)}`;
+        }
+
         // Загрузка и распределение ДЗ (Ближайшие / Прошедшие)
         async function loadHW() {
             try {
@@ -399,9 +424,9 @@
                 const past = [];
 
                 rawHomeworkData.forEach(item => {
-                    // item: [id, subject, deadline, description] или объект
                     const deadlineStr = Array.isArray(item) ? item[2] : item.deadline;
                     const itemDate = parseDateString(deadlineStr);
+                    itemDate.setHours(0, 0, 0, 0);
 
                     if (itemDate >= today) {
                         upcoming.push(item);
@@ -438,10 +463,19 @@
                 const deadline = Array.isArray(item) ? item[2] : item.deadline;
                 const desc = Array.isArray(item) ? item[3] : item.description;
 
+                // Для предстоящих подставляем расчёт дней, для прошедших — только дату
+                let deadlineBadgeText = '';
+                if (isPast) {
+                    deadlineBadgeText = `⌛ Сдано: ${deadline}`;
+                } else {
+                    const daysLeft = getDaysRemainingText(deadline);
+                    deadlineBadgeText = `⏳ До: ${deadline} (${daysLeft})`;
+                }
+
                 html += `<div class="card ${isPast ? 'past-card' : ''}">
                     <div class="card-header">
                         <span>📚 ${escapeHtml(subject)}</span>
-                        <span class="deadline-badge ${isPast ? 'expired' : ''}">${isPast ? '⌛ Сдано:' : '⏳ До:'} ${deadline}</span>
+                        <span class="deadline-badge ${isPast ? 'expired' : ''}">${deadlineBadgeText}</span>
                     </div>
                     <div class="card-body">${escapeHtml(desc)}</div>
                     ${canEdit ? `
@@ -550,7 +584,7 @@
                 loadLogs();
             };
 
-            document.getElementById('modal-text').innerText = `${hwId ? 'Сохранить изменения в' : 'Добавить'} ${type === 'dz' ? 'ДЗ' : 'экзамен'} по предметь "${subject}"?`;
+            document.getElementById('modal-text').innerText = `${hwId ? 'Сохранить изменения в' : 'Добавить'} ${type === 'dz' ? 'ДЗ' : 'экзамен'} по предмету "${subject}"?`;
             document.getElementById('confirmModal').style.display = 'flex';
         }
 
