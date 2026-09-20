@@ -287,6 +287,8 @@
         <!-- Панель добавления Сессии -->
         <div id="admin-add-session" class="admin-zone">
             <h3>➕ Добавить экзамен / зачет</h3>
+            <!-- Для сессии тоже нужно скрытое поле id -->
+            <input type="hidden" id="session-id">
             <input type="text" id="session-subject" placeholder="Предмет">
             <input type="text" id="session-deadline" placeholder="Дата экзамена (ДД.ММ.ГГГГ)">
             <textarea id="session-desc" placeholder="Кабинет, время, требования"></textarea>
@@ -568,11 +570,21 @@
             document.getElementById('form-title').innerText = "➕ Панель редактора (Добавить ДЗ)";
             document.getElementById('btn-save-hw').innerText = "Сохранить задание";
             document.getElementById('btn-cancel-edit').style.display = "none";
+            
+            // Для сессии тоже сбрасываем поля
+            if(document.getElementById('session-id')) {
+                document.getElementById('session-id').value = '';
+                document.getElementById('session-subject').value = '';
+                document.getElementById('session-desc').value = '';
+            }
         }
 
         function askConfirmAdd(type) {
             const prefix = type === 'dz' ? 'hw' : 'session';
-            const hwId = document.getElementById(`${prefix}-id`)?.value || null;
+            const hwIdValue = document.getElementById(`${prefix}-id`)?.value;
+            // ИСПРАВЛЕНИЕ: Преобразуем id в число, если оно есть, чтобы бэкенд понимал, что это обновление (UPDATE), а не создание (INSERT)
+            const hwId = hwIdValue ? parseInt(hwIdValue) : null;
+            
             const subject = document.getElementById(`${prefix}-subject`).value;
             const deadline = document.getElementById(`${prefix}-deadline`).value;
             const description = document.getElementById(`${prefix}-desc`).value;
@@ -586,7 +598,15 @@
                 await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: hwId, subject, deadline, description, type, user_id: userId, username })
+                    body: JSON.stringify({ 
+                        id: hwId, // Теперь отправляется как int (например, 5), а не string ("5")
+                        subject, 
+                        deadline, 
+                        description, 
+                        type, 
+                        user_id: String(userId), 
+                        username 
+                    })
                 });
                 resetForm();
                 if (type === 'dz') loadHW(); else loadSession();
@@ -602,7 +622,7 @@
                 await fetch(`${BACKEND_URL}/api/homework/delete?user_id=${userId}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ hw_id: hwId, user_id: userId, username })
+                    body: JSON.stringify({ hw_id: parseInt(hwId), user_id: String(userId), username })
                 });
                 loadHW();
                 loadSession();
