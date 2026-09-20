@@ -61,10 +61,39 @@
             color: #ffffff;
         }
 
-        /* Глобальная панель кнопок */
+        /* Панель управления и фильтров */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .subgroup-filters {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-filter {
+            background: #2a2a2a;
+            color: #9ca3af;
+            border: 1px solid #3d3d3d;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-filter.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #3b82f6;
+        }
+
         .global-controls {
             display: none; 
-            padding: 12px 16px 0; 
             text-align: right;
         }
 
@@ -111,6 +140,17 @@
             color: #f3f4f6;
             font-size: 15px;
         }
+        .subgroup-tag {
+            background: #334155;
+            color: #38bdf8;
+            border: 1px solid #0284c744;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+
         .deadline-badge {
             background: #3b82f622;
             color: #60a5fa;
@@ -140,7 +180,7 @@
             margin-top: 10px;
         }
 
-        input[type="text"], textarea, input[type="date"] {
+        input[type="text"], textarea, select, input[type="date"] {
             width: 100%;
             padding: 12px;
             background: #2a2a2a;
@@ -250,13 +290,21 @@
         <div class="tab" onclick="switchTab('logs', this)">Логи</div>
     </div>
 
-    <!-- Глобальная панель управления -->
-    <div id="global-controls" class="global-controls">
-        <button id="toggle-editor-btn" class="btn-toggle" onclick="toggleEditorPanel()">👁️ Скрыть панели редактора</button>
-    </div>
-
     <!-- Вкладка: Общее ДЗ -->
     <div id="hw" class="content active">
+
+        <!-- Панель фильтров подгрупп и управления редактором -->
+        <div class="controls-bar">
+            <div class="subgroup-filters">
+                <span style="font-size: 12px; color: #94a3b8; font-weight: 600; margin-right: 2px;">Группа:</span>
+                <button id="filter-pg1" class="btn-filter" onclick="toggleFilter('1')">п/г 1</button>
+                <button id="filter-pg2" class="btn-filter" onclick="toggleFilter('2')">п/г 2</button>
+            </div>
+            <div id="global-controls" class="global-controls">
+                <button id="toggle-editor-btn" class="btn-toggle" onclick="toggleEditorPanel()">👁️ Скрыть панели редактора</button>
+            </div>
+        </div>
+
         <!-- Раздел 1: Ближайшие ДЗ -->
         <div class="section-title" style="margin-top: 0;">📌 Ближайшие задания</div>
         <div id="hw-upcoming-list">Загрузка...</div>
@@ -269,9 +317,19 @@
         <div id="admin-add-hw" class="admin-zone">
             <h3 id="form-title">➕ Панель редактора (Добавить ДЗ)</h3>
             <input type="hidden" id="hw-id">
+            
+            <!-- Выбор подгруппы -->
+            <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Предназначено для:</label>
+            <select id="hw-subgroup">
+                <option value="all">Общее (для всей группы)</option>
+                <option value="1">п/г 1</option>
+                <option value="2">п/г 2</option>
+            </select>
+
             <input type="text" id="hw-subject" placeholder="Предмет (например: Высшая математика)">
             <input type="text" id="hw-deadline" placeholder="Срок сдачи (ДД.ММ.ГГГГ)" value="25.09.2026">
             <textarea id="hw-desc" placeholder="Описание задания / параграф / задачи"></textarea>
+            
             <div style="display: flex; gap: 8px;">
                 <button class="btn" id="btn-save-hw" onclick="askConfirmAdd('dz')">Сохранить задание</button>
                 <button class="btn btn-toggle" id="btn-cancel-edit" style="display:none;" onclick="resetForm()">Отмена</button>
@@ -327,6 +385,13 @@
         let isPanelVisible = true;
         let rawHomeworkData = [];
 
+        // Переменные редактирования
+        let editingHWId = null;
+        let originalHWData = null;
+
+        // Переменные фильтрации подгрупп (по умолчанию ничего не выбрано = показывать всё)
+        let activeFilters = { '1': false, '2': false };
+
         document.getElementById('debug-user-id').innerText = userId;
 
         // Инициализация
@@ -375,6 +440,57 @@
                 el.style.display = isPanelVisible ? 'flex' : 'none';
             });
             document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панели редактора' : '✏️ Показать панели редактора';
+        }
+
+        // Переключатель фильтра подгруппы
+        function toggleFilter(sub) {
+            activeFilters[sub] = !activeFilters[sub];
+            document.getElementById(`filter-pg${sub}`).classList.toggle('active', activeFilters[sub]);
+            loadHW();
+        }
+
+        // Проверка видимости карточки по фильтру подгруппы
+        function isItemVisibleByFilter(itemSubgroup) {
+            const show1 = activeFilters['1'];
+            const show2 = activeFilters['2'];
+
+            // "Общее" показывает всегда
+            if (itemSubgroup === 'all') return true;
+
+            // Если ничего не выбрано или выбраны обе подгруппы -> покажем всё
+            if ((!show1 && !show2) || (show1 && show2)) return true;
+
+            // Если выбрана 1 подгруппа
+            if (show1 && itemSubgroup === '1') return true;
+
+            // Если выбрана 2 подгруппа
+            if (show2 && itemSubgroup === '2') return true;
+
+            return false;
+        }
+
+        // Выделение информации о подгруппе из текста описания
+        function extractSubgroupAndCleanDesc(desc) {
+            let subgroup = 'all';
+            let cleanDesc = desc || '';
+
+            if (cleanDesc.includes('[п/г 1]') || cleanDesc.includes('(п/г 1)')) {
+                subgroup = '1';
+                cleanDesc = cleanDesc.replace('[п/г 1]', '').replace('(п/г 1)', '').trim();
+            } else if (cleanDesc.includes('[п/г 2]') || cleanDesc.includes('(п/г 2)')) {
+                subgroup = '2';
+                cleanDesc = cleanDesc.replace('[п/г 2]', '').replace('(п/г 2)', '').trim();
+            }
+
+            return { subgroup, cleanDesc };
+        }
+
+        // Кодирование метки подгруппы в текст
+        function encodeSubgroupInDesc(desc, subgroup) {
+            let clean = desc.replace(/\[п\/г [12]\]/g, '').replace(/\(п\/г [12]\)/g, '').trim();
+            if (subgroup === '1') return `[п/г 1] ${clean}`;
+            if (subgroup === '2') return `[п/г 2] ${clean}`;
+            return clean;
         }
 
         function parseDateString(str) {
@@ -449,17 +565,27 @@
 
         function renderCards(containerId, list, isPast) {
             const container = document.getElementById(containerId);
-            if (list.length === 0) {
+            
+            // Фильтруем список по подгруппам
+            const filteredList = list.filter(item => {
+                const rawDesc = Array.isArray(item) ? item[3] : item.description;
+                const { subgroup } = extractSubgroupAndCleanDesc(rawDesc);
+                return isItemVisibleByFilter(subgroup);
+            });
+
+            if (filteredList.length === 0) {
                 container.innerHTML = `<div style="color:#666; font-size:12px; padding:8px 0;">${isPast ? 'Прошедших заданий нет' : 'Предстоящих заданий нет'}</div>`;
                 return;
             }
 
             let html = '';
-            list.forEach(item => {
+            filteredList.forEach(item => {
                 const id = Array.isArray(item) ? item[0] : item.id;
                 const subject = Array.isArray(item) ? item[1] : item.subject;
                 const deadline = Array.isArray(item) ? item[2] : item.deadline;
-                const desc = Array.isArray(item) ? item[3] : item.description;
+                const rawDesc = Array.isArray(item) ? item[3] : item.description;
+
+                const { subgroup, cleanDesc } = extractSubgroupAndCleanDesc(rawDesc);
 
                 let deadlineBadgeText = '';
                 if (isPast) {
@@ -469,15 +595,20 @@
                     deadlineBadgeText = `⏳ До: ${deadline} (${daysLeft})`;
                 }
 
+                // Плашка подгруппы (если не "общее")
+                let subgroupBadge = '';
+                if (subgroup === '1') subgroupBadge = '<span class="subgroup-tag">п/г 1</span>';
+                if (subgroup === '2') subgroupBadge = '<span class="subgroup-tag">п/г 2</span>';
+
                 html += `<div class="card ${isPast ? 'past-card' : ''}">
                     <div class="card-header">
-                        <span>📚 ${escapeHtml(subject)}</span>
+                        <span>📚 ${escapeHtml(subject)}${subgroupBadge}</span>
                         <span class="deadline-badge ${isPast ? 'expired' : ''}">${deadlineBadgeText}</span>
                     </div>
-                    <div class="card-body">${escapeHtml(desc)}</div>
+                    <div class="card-body">${escapeHtml(cleanDesc)}</div>
                     ${canEdit ? `
                         <div class="card-actions" style="display: ${isPanelVisible ? 'flex' : 'none'};">
-                            <button class="btn btn-sm btn-toggle" onclick="startEditHW(${id}, '${escapeHtml(subject)}', '${deadline}', '${escapeHtml(desc)}')">✏️ Изменить</button>
+                            <button class="btn btn-sm btn-toggle" onclick="startEditHW(${id}, '${escapeHtml(subject)}', '${deadline}', '${escapeHtml(cleanDesc)}', '${subgroup}')">✏️ Изменить</button>
                             <button class="btn btn-sm btn-danger" onclick="askConfirmDelete(${id})">🗑️ Удалить</button>
                         </div>
                     ` : ''}
@@ -538,11 +669,16 @@
             }
         }
 
-        function startEditHW(id, subject, deadline, desc) {
+        // Заполнение формы для редактирования
+        function startEditHW(id, subject, deadline, desc, subgroup) {
+            editingHWId = id;
+            originalHWData = { subject, deadline, desc, subgroup };
+
             document.getElementById('hw-id').value = id;
             document.getElementById('hw-subject').value = subject;
             document.getElementById('hw-deadline').value = deadline;
             document.getElementById('hw-desc').value = desc;
+            document.getElementById('hw-subgroup').value = subgroup || 'all';
             
             document.getElementById('form-title').innerText = "✏️ Редактирование ДЗ";
             document.getElementById('btn-save-hw').innerText = "Сохранить изменения";
@@ -553,9 +689,14 @@
         }
 
         function resetForm() {
+            editingHWId = null;
+            originalHWData = null;
+
             document.getElementById('hw-id').value = '';
             document.getElementById('hw-subject').value = '';
             document.getElementById('hw-desc').value = '';
+            document.getElementById('hw-subgroup').value = 'all';
+
             document.getElementById('form-title').innerText = "➕ Панель редактора (Добавить ДЗ)";
             document.getElementById('btn-save-hw').innerText = "Сохранить задание";
             document.getElementById('btn-cancel-edit').style.display = "none";
@@ -569,52 +710,63 @@
 
         function askConfirmAdd(type) {
             const prefix = type === 'dz' ? 'hw' : 'session';
-            const hwIdValue = document.getElementById(`${prefix}-id`)?.value;
-            const hwId = hwIdValue ? parseInt(hwIdValue) : null;
-            
-            const subject = document.getElementById(`${prefix}-subject`).value;
-            const deadline = document.getElementById(`${prefix}-deadline`).value;
-            const description = document.getElementById(`${prefix}-desc`).value;
+            const subject = document.getElementById(`${prefix}-subject`).value.trim();
+            const deadline = document.getElementById(`${prefix}-deadline`).value.trim();
+            const rawDesc = document.getElementById(`${prefix}-desc`).value.trim();
+            const subgroup = document.getElementById(`${prefix}-subgroup`)?.value || 'all';
 
-            if (!subject || !deadline || !description) {
+            if (!subject || !deadline || !rawDesc) {
                 alert("Заполните все поля!");
                 return;
             }
 
-            pendingAction = async () => {
-                // Создаем полезную нагрузку (payload), обязательно передавая параметр hw_id, 
-                // так как именно он распознается бэкендом для обновления (UPDATE)
-                const payload = {
-                    hw_id: hwId, // Ключевое исправление здесь!
-                    id: hwId,    // Оставляем id на всякий случай для совместимости
-                    subject,
-                    deadline,
-                    description,
-                    type,
-                    user_id: String(userId),
-                    username
-                };
+            const encodedDesc = type === 'dz' ? encodeSubgroupInDesc(rawDesc, subgroup) : rawDesc;
 
-                // Если есть hwId (то есть это редактирование), сначала пробуем обратиться по маршруту /edit
-                let endpoint = hwId ? '/api/homework/edit' : '/api/homework/add';
-                
+            // Проверка: были ли внесены изменения при редактировании
+            if (editingHWId && originalHWData) {
+                const isUnchanged = 
+                    originalHWData.subject === subject &&
+                    originalHWData.deadline === deadline &&
+                    originalHWData.desc === rawDesc &&
+                    originalHWData.subgroup === subgroup;
+
+                if (isUnchanged) {
+                    alert("Никаких изменений не внесено.");
+                    resetForm();
+                    return;
+                }
+            }
+
+            pendingAction = async () => {
                 try {
-                    let res = await fetch(`${BACKEND_URL}${endpoint}?user_id=${userId}`, {
+                    // 1. Сначала СОЗДАЕМ новую карточку с обновленными данными
+                    const addRes = await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ 
+                            subject, 
+                            deadline, 
+                            description: encodedDesc, 
+                            type, 
+                            user_id: String(userId), 
+                            username 
+                        })
                     });
 
-                    // Если бэкенд не имеет пути /edit (выдал ошибку 404), делаем fallback на маршрут /add
-                    if (!res.ok && res.status === 404 && hwId) {
-                        await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
+                    // 2. Только если новая карточка успешно создана И это был режим редактирования -> УДАЛЯЕМ старую
+                    if (addRes.ok && editingHWId) {
+                        await fetch(`${BACKEND_URL}/api/homework/delete?user_id=${userId}`, {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify({ 
+                                hw_id: parseInt(editingHWId), 
+                                user_id: String(userId), 
+                                username 
+                            })
                         });
                     }
                 } catch(e) {
-                    console.error("Ошибка при сохранении:", e);
+                    console.error("Ошибка сохранения/редактирования:", e);
                 }
 
                 resetForm();
@@ -622,7 +774,7 @@
                 loadLogs();
             };
 
-            document.getElementById('modal-text').innerText = `${hwId ? 'Сохранить изменения в' : 'Добавить'} ${type === 'dz' ? 'ДЗ' : 'экзамен'} по предмету "${subject}"?`;
+            document.getElementById('modal-text').innerText = `${editingHWId ? 'Сохранить изменения в' : 'Добавить'} ${type === 'dz' ? 'ДЗ' : 'экзамен'} по предмету "${subject}"?`;
             document.getElementById('confirmModal').style.display = 'flex';
         }
 
@@ -660,10 +812,10 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Автозакрытие клавиатуры
+        // Автозакрытие клавиатуры на iOS при тапе вне ввода
         document.addEventListener('touchstart', function (e) {
             const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
                 if (!e.target.closest('input, textarea, button, select, .tab')) {
                     activeEl.blur();
                 }
