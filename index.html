@@ -247,6 +247,7 @@
             margin-bottom: 10px;
         }
 
+        /* Окно подтверждения (Confirm) */
         .modal {
             display: none;
             position: fixed;
@@ -273,9 +274,36 @@
             padding: 8px 0;
             color: #9ca3af;
         }
+
+        /* Кастомное уведомление об ошибке (Toast) вместо Alert */
+        .toast-notification {
+            position: fixed;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            transition: bottom 0.3s ease-in-out;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .toast-notification.show {
+            bottom: 20px;
+        }
+        .toast-notification.success {
+            background-color: #10b981;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Кастомное всплывающее уведомление -->
+    <div id="toast" class="toast-notification">Заполните все поля!</div>
 
     <!-- Шапка статуса -->
     <div class="user-status-bar">
@@ -385,14 +413,25 @@
         let isPanelVisible = true;
         let rawHomeworkData = [];
 
-        // Переменные редактирования
         let editingHWId = null;
         let originalHWData = null;
-
-        // Переменные фильтрации подгрупп (по умолчанию ничего не выбрано = показывать всё)
         let activeFilters = { '1': false, '2': false };
 
         document.getElementById('debug-user-id').innerText = userId;
+
+        // --- Кастомное уведомление (Toast) без блокировки экрана ---
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            
+            if (type === 'success') toast.classList.add('success');
+            else toast.classList.remove('success');
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000); // Исчезает через 3 секунды
+        }
 
         // Инициализация
         async function init() {
@@ -442,34 +481,24 @@
             document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панели редактора' : '✏️ Показать панели редактора';
         }
 
-        // Переключатель фильтра подгруппы
         function toggleFilter(sub) {
             activeFilters[sub] = !activeFilters[sub];
             document.getElementById(`filter-pg${sub}`).classList.toggle('active', activeFilters[sub]);
             loadHW();
         }
 
-        // Проверка видимости карточки по фильтру подгруппы
         function isItemVisibleByFilter(itemSubgroup) {
             const show1 = activeFilters['1'];
             const show2 = activeFilters['2'];
 
-            // "Общее" показывает всегда
             if (itemSubgroup === 'all') return true;
-
-            // Если ничего не выбрано или выбраны обе подгруппы -> покажем всё
             if ((!show1 && !show2) || (show1 && show2)) return true;
-
-            // Если выбрана 1 подгруппа
             if (show1 && itemSubgroup === '1') return true;
-
-            // Если выбрана 2 подгруппа
             if (show2 && itemSubgroup === '2') return true;
 
             return false;
         }
 
-        // Выделение информации о подгруппе из текста описания
         function extractSubgroupAndCleanDesc(desc) {
             let subgroup = 'all';
             let cleanDesc = desc || '';
@@ -485,7 +514,6 @@
             return { subgroup, cleanDesc };
         }
 
-        // Кодирование метки подгруппы в текст
         function encodeSubgroupInDesc(desc, subgroup) {
             let clean = desc.replace(/\[п\/г [12]\]/g, '').replace(/\(п\/г [12]\)/g, '').trim();
             if (subgroup === '1') return `[п/г 1] ${clean}`;
@@ -566,7 +594,6 @@
         function renderCards(containerId, list, isPast) {
             const container = document.getElementById(containerId);
             
-            // Фильтруем список по подгруппам
             const filteredList = list.filter(item => {
                 const rawDesc = Array.isArray(item) ? item[3] : item.description;
                 const { subgroup } = extractSubgroupAndCleanDesc(rawDesc);
@@ -595,7 +622,6 @@
                     deadlineBadgeText = `⏳ До: ${deadline} (${daysLeft})`;
                 }
 
-                // Плашка подгруппы (если не "общее")
                 let subgroupBadge = '';
                 if (subgroup === '1') subgroupBadge = '<span class="subgroup-tag">п/г 1</span>';
                 if (subgroup === '2') subgroupBadge = '<span class="subgroup-tag">п/г 2</span>';
@@ -669,7 +695,6 @@
             }
         }
 
-        // Заполнение формы для редактирования
         function startEditHW(id, subject, deadline, desc, subgroup) {
             editingHWId = id;
             originalHWData = { subject, deadline, desc, subgroup };
@@ -695,7 +720,10 @@
             document.getElementById('hw-id').value = '';
             document.getElementById('hw-subject').value = '';
             document.getElementById('hw-desc').value = '';
-            document.getElementById('hw-subgroup').value = 'all';
+            
+            if(document.getElementById('hw-subgroup')) {
+                document.getElementById('hw-subgroup').value = 'all';
+            }
 
             document.getElementById('form-title').innerText = "➕ Панель редактора (Добавить ДЗ)";
             document.getElementById('btn-save-hw').innerText = "Сохранить задание";
@@ -716,13 +744,13 @@
             const subgroup = document.getElementById(`${prefix}-subgroup`)?.value || 'all';
 
             if (!subject || !deadline || !rawDesc) {
-                alert("Заполните все поля!");
+                // ИСПОЛЬЗУЕМ КУСТОМНЫЙ TOAST ВМЕСТО ALERT
+                showToast("Заполните все поля!");
                 return;
             }
 
             const encodedDesc = type === 'dz' ? encodeSubgroupInDesc(rawDesc, subgroup) : rawDesc;
 
-            // Проверка: были ли внесены изменения при редактировании
             if (editingHWId && originalHWData) {
                 const isUnchanged = 
                     originalHWData.subject === subject &&
@@ -731,7 +759,7 @@
                     originalHWData.subgroup === subgroup;
 
                 if (isUnchanged) {
-                    alert("Никаких изменений не внесено.");
+                    showToast("Никаких изменений не внесено.", 'success');
                     resetForm();
                     return;
                 }
@@ -739,7 +767,6 @@
 
             pendingAction = async () => {
                 try {
-                    // 1. Сначала СОЗДАЕМ новую карточку с обновленными данными
                     const addRes = await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -753,7 +780,6 @@
                         })
                     });
 
-                    // 2. Только если новая карточка успешно создана И это был режим редактирования -> УДАЛЯЕМ старую
                     if (addRes.ok && editingHWId) {
                         await fetch(`${BACKEND_URL}/api/homework/delete?user_id=${userId}`, {
                             method: 'POST',
@@ -765,8 +791,10 @@
                             })
                         });
                     }
+                    showToast("Успешно сохранено!", 'success');
                 } catch(e) {
-                    console.error("Ошибка сохранения/редактирования:", e);
+                    console.error("Ошибка сохранения:", e);
+                    showToast("Произошла ошибка при сохранении!");
                 }
 
                 resetForm();
@@ -785,6 +813,7 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ hw_id: parseInt(hwId), user_id: String(userId), username })
                 });
+                showToast("Успешно удалено!", 'success');
                 loadHW();
                 loadSession();
                 loadLogs();
@@ -812,7 +841,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Автозакрытие клавиатуры на iOS при тапе вне ввода
+        // Автозакрытие клавиатуры на iOS
         document.addEventListener('touchstart', function (e) {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
