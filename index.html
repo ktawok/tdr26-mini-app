@@ -408,7 +408,7 @@
                 return `${n} дней`;
             }
 
-            return diffDays === 1 ? "остался 1 день" : `осталось: ${pluralize(diffDays)}`;
+            return pluralize(diffDays);
         }
 
         // Загрузка и распределение ДЗ (Ближайшие / Прошедшие)
