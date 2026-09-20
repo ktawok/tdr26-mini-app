@@ -366,11 +366,15 @@
             el.classList.add('active');
         }
 
-        // Глобальная функция скрытия/показа панелей
+        // Глобальная функция скрытия/показа всех панелей и кнопок действий
         function toggleEditorPanel() {
             isPanelVisible = !isPanelVisible;
             document.querySelectorAll('.admin-zone').forEach(el => {
                 el.style.display = isPanelVisible ? 'block' : 'none';
+            });
+            // Скрываем также все кнопки внутри самих карточек (Изменить, Удалить)
+            document.querySelectorAll('.card-actions').forEach(el => {
+                el.style.display = isPanelVisible ? 'flex' : 'none';
             });
             document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панели редактора' : '✏️ Показать панели редактора';
         }
@@ -436,9 +440,7 @@
                     }
                 });
 
-                // Ближайшие: сначала самые срочные
                 upcoming.sort((a, b) => parseDateString(Array.isArray(a)?a[2]:a.deadline) - parseDateString(Array.isArray(b)?b[2]:b.deadline));
-                // Прошедшие: сначала недавно завершенные
                 past.sort((a, b) => parseDateString(Array.isArray(b)?b[2]:b.deadline) - parseDateString(Array.isArray(a)?a[2]:a.deadline));
 
                 renderCards('hw-upcoming-list', upcoming, false);
@@ -464,7 +466,6 @@
                 const deadline = Array.isArray(item) ? item[2] : item.deadline;
                 const desc = Array.isArray(item) ? item[3] : item.description;
 
-                // Для предстоящих подставляем расчёт дней, для прошедших — только дату
                 let deadlineBadgeText = '';
                 if (isPast) {
                     deadlineBadgeText = `⌛ Сдано: ${deadline}`;
@@ -480,7 +481,7 @@
                     </div>
                     <div class="card-body">${escapeHtml(desc)}</div>
                     ${canEdit ? `
-                        <div class="card-actions">
+                        <div class="card-actions" style="display: ${isPanelVisible ? 'flex' : 'none'};">
                             <button class="btn btn-sm btn-toggle" onclick="startEditHW(${id}, '${escapeHtml(subject)}', '${deadline}', '${escapeHtml(desc)}')">✏️ Изменить</button>
                             <button class="btn btn-sm btn-danger" onclick="askConfirmDelete(${id})">🗑️ Удалить</button>
                         </div>
@@ -510,7 +511,11 @@
                                 <span class="deadline-badge">📅 ${deadline}</span>
                             </div>
                             <div class="card-body">${escapeHtml(desc)}</div>
-                            ${canEdit ? `<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="askConfirmDelete(${id})">Удалить</button>` : ''}
+                            ${canEdit ? `
+                                <div class="card-actions" style="display: ${isPanelVisible ? 'flex' : 'none'}; margin-top: 10px;">
+                                    <button class="btn btn-danger btn-sm" onclick="askConfirmDelete(${id})">🗑️ Удалить</button>
+                                </div>
+                            ` : ''}
                         </div>`;
                     });
                 }
@@ -549,7 +554,7 @@
             document.getElementById('btn-save-hw').innerText = "Сохранить изменения";
             document.getElementById('btn-cancel-edit').style.display = "inline-block";
             
-            // Если панель была скрыта — открываем её перед прокруткой
+            // Если панели были скрыты — открываем их перед прокруткой
             if (!isPanelVisible) toggleEditorPanel();
 
             // Прокрутка к форме
