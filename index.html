@@ -250,7 +250,7 @@
         <div class="tab" onclick="switchTab('logs', this)">Логи</div>
     </div>
 
-    <!-- Глобальная панель управления (видна только админам) -->
+    <!-- Глобальная панель управления -->
     <div id="global-controls" class="global-controls">
         <button id="toggle-editor-btn" class="btn-toggle" onclick="toggleEditorPanel()">👁️ Скрыть панели редактора</button>
     </div>
@@ -287,7 +287,6 @@
         <!-- Панель добавления Сессии -->
         <div id="admin-add-session" class="admin-zone">
             <h3>➕ Добавить экзамен / зачет</h3>
-            <!-- Для сессии тоже нужно скрытое поле id -->
             <input type="hidden" id="session-id">
             <input type="text" id="session-subject" placeholder="Предмет">
             <input type="text" id="session-deadline" placeholder="Дата экзамена (ДД.ММ.ГГГГ)">
@@ -330,7 +329,7 @@
 
         document.getElementById('debug-user-id').innerText = userId;
 
-        // Инициализация при запуске
+        // Инициализация
         async function init() {
             try {
                 const res = await fetch(`${BACKEND_URL}/api/user_info?user_id=${userId}`);
@@ -344,7 +343,6 @@
                         if (data.role === 'superadmin') badge.classList.add('admin');
                         else badge.classList.add('editor');
                         
-                        // Показываем все панели и кнопку их скрытия
                         document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
                         document.getElementById('global-controls').style.display = 'block';
                     }
@@ -368,20 +366,17 @@
             el.classList.add('active');
         }
 
-        // Глобальная функция скрытия/показа всех панелей и кнопок действий
         function toggleEditorPanel() {
             isPanelVisible = !isPanelVisible;
             document.querySelectorAll('.admin-zone').forEach(el => {
                 el.style.display = isPanelVisible ? 'block' : 'none';
             });
-            // Скрываем также все кнопки внутри самих карточек (Изменить, Удалить)
             document.querySelectorAll('.card-actions').forEach(el => {
                 el.style.display = isPanelVisible ? 'flex' : 'none';
             });
             document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панели редактора' : '✏️ Показать панели редактора';
         }
 
-        // Парсинг даты из формата "ДД.ММ.ГГГГ" или "ГГГГ-ММ-ДД"
         function parseDateString(str) {
             if (!str) return new Date(0);
             if (str.includes('.')) {
@@ -393,7 +388,6 @@
             return new Date(str);
         }
 
-        // Расчет оставшихся дней с правильными окончаниями
         function getDaysRemainingText(deadlineStr) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -418,7 +412,6 @@
             return pluralize(diffDays);
         }
 
-        // Загрузка и распределение ДЗ (Ближайшие / Прошедшие)
         async function loadHW() {
             try {
                 const res = await fetch(`${BACKEND_URL}/api/homework?type=dz`);
@@ -545,7 +538,6 @@
             }
         }
 
-        // Заполнение формы для редактирования
         function startEditHW(id, subject, deadline, desc) {
             document.getElementById('hw-id').value = id;
             document.getElementById('hw-subject').value = subject;
@@ -556,10 +548,7 @@
             document.getElementById('btn-save-hw').innerText = "Сохранить изменения";
             document.getElementById('btn-cancel-edit').style.display = "inline-block";
             
-            // Если панели были скрыты — открываем их перед прокруткой
             if (!isPanelVisible) toggleEditorPanel();
-
-            // Прокрутка к форме
             document.getElementById('admin-add-hw').scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -571,7 +560,6 @@
             document.getElementById('btn-save-hw').innerText = "Сохранить задание";
             document.getElementById('btn-cancel-edit').style.display = "none";
             
-            // Для сессии тоже сбрасываем поля
             if(document.getElementById('session-id')) {
                 document.getElementById('session-id').value = '';
                 document.getElementById('session-subject').value = '';
@@ -582,7 +570,6 @@
         function askConfirmAdd(type) {
             const prefix = type === 'dz' ? 'hw' : 'session';
             const hwIdValue = document.getElementById(`${prefix}-id`)?.value;
-            // ИСПРАВЛЕНИЕ: Преобразуем id в число, если оно есть, чтобы бэкенд понимал, что это обновление (UPDATE), а не создание (INSERT)
             const hwId = hwIdValue ? parseInt(hwIdValue) : null;
             
             const subject = document.getElementById(`${prefix}-subject`).value;
@@ -595,19 +582,41 @@
             }
 
             pendingAction = async () => {
-                await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        id: hwId, // Теперь отправляется как int (например, 5), а не string ("5")
-                        subject, 
-                        deadline, 
-                        description, 
-                        type, 
-                        user_id: String(userId), 
-                        username 
-                    })
-                });
+                // Создаем полезную нагрузку (payload), обязательно передавая параметр hw_id, 
+                // так как именно он распознается бэкендом для обновления (UPDATE)
+                const payload = {
+                    hw_id: hwId, // Ключевое исправление здесь!
+                    id: hwId,    // Оставляем id на всякий случай для совместимости
+                    subject,
+                    deadline,
+                    description,
+                    type,
+                    user_id: String(userId),
+                    username
+                };
+
+                // Если есть hwId (то есть это редактирование), сначала пробуем обратиться по маршруту /edit
+                let endpoint = hwId ? '/api/homework/edit' : '/api/homework/add';
+                
+                try {
+                    let res = await fetch(`${BACKEND_URL}${endpoint}?user_id=${userId}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+
+                    // Если бэкенд не имеет пути /edit (выдал ошибку 404), делаем fallback на маршрут /add
+                    if (!res.ok && res.status === 404 && hwId) {
+                        await fetch(`${BACKEND_URL}/api/homework/add?user_id=${userId}`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                } catch(e) {
+                    console.error("Ошибка при сохранении:", e);
+                }
+
                 resetForm();
                 if (type === 'dz') loadHW(); else loadSession();
                 loadLogs();
@@ -651,7 +660,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Автоматическое закрытие клавиатуры на iOS при клике в свободное место
+        // Автозакрытие клавиатуры
         document.addEventListener('touchstart', function (e) {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
