@@ -61,6 +61,13 @@
             color: #ffffff;
         }
 
+        /* Глобальная панель кнопок */
+        .global-controls {
+            display: none; 
+            padding: 12px 16px 0; 
+            text-align: right;
+        }
+
         .content {
             padding: 16px;
             display: none;
@@ -79,14 +86,6 @@
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-
-        .controls-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
         }
 
         .card {
@@ -251,16 +250,15 @@
         <div class="tab" onclick="switchTab('logs', this)">Логи</div>
     </div>
 
+    <!-- Глобальная панель управления (видна только админам) -->
+    <div id="global-controls" class="global-controls">
+        <button id="toggle-editor-btn" class="btn-toggle" onclick="toggleEditorPanel()">👁️ Скрыть панели редактора</button>
+    </div>
+
     <!-- Вкладка: Общее ДЗ -->
     <div id="hw" class="content active">
-        <div class="controls-bar">
-            <div></div>
-            <!-- Кнопка скрытия/показа панели редактора -->
-            <button id="toggle-editor-btn" class="btn-toggle" style="display:none;" onclick="toggleEditorPanel()">👁️ Скрыть панель</button>
-        </div>
-
         <!-- Раздел 1: Ближайшие ДЗ -->
-        <div class="section-title">📌 Ближайшие задания</div>
+        <div class="section-title" style="margin-top: 0;">📌 Ближайшие задания</div>
         <div id="hw-upcoming-list">Загрузка...</div>
 
         <!-- Раздел 2: Прошедшие ДЗ -->
@@ -283,9 +281,10 @@
 
     <!-- Вкладка: Сессия -->
     <div id="session" class="content">
-        <h2>🎓 Зачеты и экзамены</h2>
+        <h2 style="margin-top: 0; font-size: 18px;">🎓 Зачеты и экзамены</h2>
         <div id="session-list">Загрузка...</div>
 
+        <!-- Панель добавления Сессии -->
         <div id="admin-add-session" class="admin-zone">
             <h3>➕ Добавить экзамен / зачет</h3>
             <input type="text" id="session-subject" placeholder="Предмет">
@@ -297,7 +296,7 @@
 
     <!-- Вкладка: Логи -->
     <div id="logs" class="content">
-        <h2>📜 История действий (Audit Log)</h2>
+        <h2 style="margin-top: 0; font-size: 18px;">📜 История действий (Audit Log)</h2>
         <div id="logs-list">Загрузка логов...</div>
     </div>
 
@@ -343,8 +342,9 @@
                         if (data.role === 'superadmin') badge.classList.add('admin');
                         else badge.classList.add('editor');
                         
+                        // Показываем все панели и кнопку их скрытия
                         document.querySelectorAll('.admin-zone').forEach(el => el.style.display = 'block');
-                        document.getElementById('toggle-editor-btn').style.display = 'inline-block';
+                        document.getElementById('global-controls').style.display = 'block';
                     }
                 } else {
                     document.getElementById('debug-role-badge').innerText = "VIEWER";
@@ -366,12 +366,13 @@
             el.classList.add('active');
         }
 
+        // Глобальная функция скрытия/показа панелей
         function toggleEditorPanel() {
             isPanelVisible = !isPanelVisible;
             document.querySelectorAll('.admin-zone').forEach(el => {
                 el.style.display = isPanelVisible ? 'block' : 'none';
             });
-            document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панель' : '✏️ Показать панель';
+            document.getElementById('toggle-editor-btn').innerText = isPanelVisible ? '👁️ Скрыть панели редактора' : '✏️ Показать панели редактора';
         }
 
         // Парсинг даты из формата "ДД.ММ.ГГГГ" или "ГГГГ-ММ-ДД"
@@ -548,6 +549,9 @@
             document.getElementById('btn-save-hw').innerText = "Сохранить изменения";
             document.getElementById('btn-cancel-edit').style.display = "inline-block";
             
+            // Если панель была скрыта — открываем её перед прокруткой
+            if (!isPanelVisible) toggleEditorPanel();
+
             // Прокрутка к форме
             document.getElementById('admin-add-hw').scrollIntoView({ behavior: 'smooth' });
         }
