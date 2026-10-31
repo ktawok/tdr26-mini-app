@@ -403,7 +403,7 @@
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
-        const BACKEND_URL = "https://tdr26-backend.onrender.com"; 
+        const BACKEND_URL = "https://mgri-exam-bot.onrender.com/tdr";  // бот ДЗ живёт в сервисе mgri-exam-bot и не засыпает 
 
         const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(window.location.search).get('user_id') || 123456789;
         const username = tg?.initDataUnsafe?.user?.username || tg?.initDataUnsafe?.user?.first_name || "student";
